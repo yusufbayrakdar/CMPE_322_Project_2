@@ -89,13 +89,25 @@ void *client(void* ptr)
     int sleep=rand()%150+50;//Find a random number between 50-200 to sleep
     sleep_time[id]=sleep;
     usleep(sleep*1000);//Sleep a few milisec
+    m.lock();
+    order_coming[id]=coming_order;
+    coming_order++;
+    m.unlock();
     reserv_seat=rand()%(totalSeat-1);//Choose a seat to reserve after wake up
+    // if(id==3){
+    //     usleep(80*1000);
+    // }
+    // if(id==1)
+    // for(int i = 1; i < 6; i++)
+    // {
+    //     cout<<sleep_time[id]<<" "<<id<<endl;
+    // }
     m.lock();
     reserv_seat++;
-    order_coming[id]=coming_order;
+    
     myName="Client "+to_string(order_coming[id]);
     clients[id]=myName;
-    coming_order++;
+    
     while(true){
         if (seats[reserv_seat]==0) {
             seats[reserv_seat]=order_coming[id];
@@ -105,9 +117,7 @@ void *client(void* ptr)
         reserv_seat=rand()%totalSeat;//Choose a seat to reserve after wake up
     }
     m.unlock();//For preemption I divide this section of code and unlock the mutex
-    // if(id==3){
-    //     usleep(80*1000);
-    // }
+
         m.lock();//After giving a chance to preemption I lock mutex again
         cout<<clients[id]<<" "<<sleep<<" "<<client_seat[id]<<endl;
         pthread_attr_init(&attr);/* get the default attributes defined by pthread */
