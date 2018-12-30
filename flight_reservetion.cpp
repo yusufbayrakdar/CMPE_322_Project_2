@@ -32,15 +32,15 @@ void *servant(void *param); /* the declaration function executed by the thread *
 int coming_order=1;
 mutex m;
 vector<int> seats; 
-string clients[100]; 
-int order_coming[100];
-int client_seat[100];
-int sleep_time[100];
-int order[100];
+string clients[101]; 
+int client_seat[101];
+int sleep_time[101];
+int order[101];
 long totalSeat=0;
 int reserv_seat;
 string myName;
 bool alive_pthread=true;
+int barrier=1;
 ofstream out ("output.txt");//Create output.txt
 /*End Of The Definitions*/
 
@@ -54,7 +54,6 @@ int main(int argc,char *argv[]){
         cout<<"Enter a number between 50 and 100 please!"<<endl;
         return -1;
     }
-    // totalSeat=5;
     cout<<"Number of total seats: "<<totalSeat<<endl;//Write total seat number to terminal
     out<<"Number of total seats: "<<totalSeat<<endl;//Write total seat number to output.txt
     //Create thread list
@@ -88,29 +87,55 @@ void *client(void* ptr)
     delete (int*)ptr;//Release memory of pointer
     int sleep=rand()%150+50;//Find a random number between 50-200 to sleep
     sleep_time[id]=sleep;
+    barrier++;
+    while(barrier!=totalSeat+1){//To find out every sleep time wait for everyone
+        if(barrier==totalSeat+1)
+        break;
+    }
+    
+    for(int i = 1; i < totalSeat+1; i++)
+    {
+        int x=0;
+        m.lock();
+        if(id==i){
+            for(int i = 1; i < 101; i++)
+            {
+                // cout<<sleep_time[i]<<" "<<sleep_time[id]<<endl;
+                if(sleep_time[i]!=0&&sleep_time[i]<=sleep_time[id]){
+                    x++;
+                }
+            }
+        int y=0;
+        for(int i = 0; i < 101; i++)
+        {
+            if(order[i]==x){
+                y++;
+            }
+        }
+        x=x-y;
+        
+        order[id]=x;
+        x=0;
+        }
+        m.unlock();
+    }
     usleep(sleep*1000);//Sleep a few milisec
-    m.lock();
-    order_coming[id]=coming_order;
-    coming_order++;
-    m.unlock();
-    reserv_seat=rand()%(totalSeat-1);//Choose a seat to reserve after wake up
     // if(id==3){
     //     usleep(80*1000);
     // }
-    // if(id==1)
-    // for(int i = 1; i < 6; i++)
-    // {
-    //     cout<<sleep_time[id]<<" "<<id<<endl;
-    // }
+    reserv_seat=rand()%(totalSeat-1);//Choose a seat to reserve after wake up
+    
+    
     m.lock();
+    coming_order++;
     reserv_seat++;
     
-    myName="Client "+to_string(order_coming[id]);
+    myName="Client "+to_string(order[id]);
     clients[id]=myName;
     
     while(true){
         if (seats[reserv_seat]==0) {
-            seats[reserv_seat]=order_coming[id];
+            seats[reserv_seat]=order[id];
             client_seat[id]=reserv_seat+1;
             break;
         }
@@ -119,7 +144,8 @@ void *client(void* ptr)
     m.unlock();//For preemption I divide this section of code and unlock the mutex
 
         m.lock();//After giving a chance to preemption I lock mutex again
-        cout<<clients[id]<<" "<<sleep<<" "<<client_seat[id]<<endl;
+        cout<<clients[id]<<" "<<sleep<<" "<<client_seat[id]<<" "<<id<<endl;
+        // cout<<order[id]<<endl;
         pthread_attr_init(&attr);/* get the default attributes defined by pthread */
         pthread_create(&tid,&attr,servant,new int (id));/* create the thread with giving an ID, default attributes, where to start and argument for the method */
         pthread_join(tid,NULL);/* parent (client) thread waits for the child (servant) thread to exit */   
